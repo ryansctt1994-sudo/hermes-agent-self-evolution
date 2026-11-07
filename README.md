@@ -68,12 +68,23 @@ python -m evolution.skills.evolve_skill \
 
 ## Guardrails
 
-Every evolved variant must pass:
-1. **Full test suite** — `pytest tests/ -q` must pass 100%
-2. **Size limits** — Skills ≤15KB, tool descriptions ≤500 chars
-3. **Caching compatibility** — No mid-conversation changes
-4. **Semantic preservation** — Must not drift from original purpose
-5. **PR review** — All changes go through human review, never direct commit
+What the code enforces on an evolved skill today, and what it doesn't:
+
+| Guardrail | Status | Where |
+|---|---|---|
+| Size limit (skills ≤15KB) | Enforced | `ConstraintValidator._check_size` |
+| Growth limit (≤20% over the baseline) | Enforced | `ConstraintValidator._check_growth` |
+| Non-empty, with `name` and `description` frontmatter | Enforced | `ConstraintValidator.validate_all` |
+| hermes-agent's test suite passes 100% | Enforced **only with `--run-tests`**. The suite runs on a scratch copy of hermes-agent with the evolved skill in place; the real checkout is never written | `ConstraintValidator.run_test_suite_with_artifact` |
+| Caching compatibility (no mid-conversation changes) | Design rule, not checked in code | — |
+| Semantic preservation (no drift from the original purpose) | Design rule, not checked in code | — |
+| Human review, never a direct commit | Process. The pipeline writes results to `output/` and never opens a pull request or writes to hermes-agent | — |
+
+A variant that fails an enforced check is saved as `output/<skill>/evolved_FAILED.md` and not reported as an improvement.
+
+## Phase 1 report
+
+`reports/phase1_validation_report.pdf` (March 2026) records one end-to-end run on one held-out example (0.408 → 0.569). Its numbers are written into `generate_report.py`, not read from a metrics file, and its roadmap row said "Validated ✓". The generator now says "Prototype run"; the committed PDF predates that change and was not regenerated, so it keeps its original date and wording.
 
 ## Full Plan
 
