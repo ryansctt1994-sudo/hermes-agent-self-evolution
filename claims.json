@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "exclude": [
+    {
+      "glob": "tests/**",
+      "reason": "Test inputs and assertions (e.g. strings fed to the secret detector), not public claims."
+    }
+  ],
+  "waivers": [
+    {
+      "term": "validated",
+      "file": "PLAN.md",
+      "contains": "validated benchmark gating",
+      "reason": "Not a claim: future-phase prerequisite in the plan (lines 254 and 516)."
+    },
+    {
+      "term": "validated",
+      "file": "PLAN.md",
+      "contains": "benchmark gating validated",
+      "reason": "Not a claim: future-phase prerequisite in the plan."
+    },
+    {
+      "term": "validated",
+      "file": "PLAN.md",
+      "contains": "validated by reproduction script",
+      "reason": "Not a claim: success criterion for a future phase."
+    },
+    {
+      "term": "validated",
+      "file": "evolution/skills/evolve_skill.py",
+      "contains": "setup validated successfully",
+      "reason": "Not a claim: CLI status message printed after a dry run checks its inputs."
+    },
+    {
+      "term": "validated",
+      "file": "generate_report.py",
+      "contains": "'Validated ✓'",
+      "reason": "OWNER REVIEW: marks Phase 1 'Validated' in the generated PDF. The supporting report (reports/phase1_validation_report.pdf) is produced by this same script and covers one held-out example (0.408 -> 0.569). Decide whether that supports 'Validated', or reword the status (e.g. 'Prototype run')."
+    }
+  ]
+}
