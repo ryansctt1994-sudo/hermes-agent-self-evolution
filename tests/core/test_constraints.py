@@ -6,8 +6,10 @@ from evolution.core.config import EvolutionConfig
 
 
 @pytest.fixture
-def validator():
-    config = EvolutionConfig()
+def validator(tmp_path):
+    # Constraint checks don't touch the hermes-agent checkout, so point the
+    # config at a temp dir instead of requiring a real install.
+    config = EvolutionConfig(hermes_agent_path=tmp_path)
     return ConstraintValidator(config)
 
 
