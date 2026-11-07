@@ -39,9 +39,9 @@ class EvolutionConfig:
     run_tblite: bool = False  # Expensive — opt-in
     tblite_regression_threshold: float = 0.02  # Max 2% regression allowed
 
-    # Output
+    # Output. Results are written here for human review; nothing opens a pull
+    # request or writes to hermes-agent.
     output_dir: Path = field(default_factory=lambda: Path("./output"))
-    create_pr: bool = True
 
 
 def get_hermes_agent_path() -> Path:

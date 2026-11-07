@@ -436,7 +436,8 @@ def build_report(output_path: str = "reports/phase1_validation_report.pdf"):
     story.append(Paragraph("Roadmap", styles['SectionHead']))
     roadmap_data = [
         ['Phase', 'Target', 'Engine', 'Timeline', 'Status'],
-        ['Phase 1', 'Skill files (SKILL.md)', 'DSPy + GEPA', '3-4 weeks', 'Validated ✓'],
+        # One held-out example (0.408 -> 0.569) is a prototype run, not validation.
+        ['Phase 1', 'Skill files (SKILL.md)', 'DSPy + GEPA', '3-4 weeks', 'Prototype run'],
         ['Phase 2', 'Tool descriptions', 'DSPy + GEPA', '2-3 weeks', 'Planned'],
         ['Phase 3', 'System prompt sections', 'DSPy + GEPA', '2-3 weeks', 'Planned'],
         ['Phase 4', 'Tool implementation code', 'Darwinian Evolver', '3-4 weeks', 'Planned'],

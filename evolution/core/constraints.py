@@ -4,7 +4,9 @@ Every candidate variant must pass ALL constraints before it can be
 considered valid. Failed constraints = immediate rejection.
 """
 
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
@@ -52,11 +54,57 @@ class ConstraintValidator:
 
         return results
 
-    def run_test_suite(self, hermes_repo: Path) -> ConstraintResult:
+    def run_test_suite_with_artifact(
+        self,
+        hermes_repo: Path,
+        artifact_relpath: Path,
+        artifact_text: str,
+        python: str = "python",
+    ) -> ConstraintResult:
+        """Run the hermes-agent test suite with an evolved artifact in place.
+
+        The suite runs against a scratch copy of ``hermes_repo`` in which the
+        file at ``artifact_relpath`` is replaced by ``artifact_text``. The real
+        repository is never written to. Anything that stops the copy or the
+        replacement fails the constraint.
+        """
+        hermes_repo = Path(hermes_repo)
+        relpath = Path(artifact_relpath)
+        if relpath.is_absolute() or ".." in relpath.parts:
+            return ConstraintResult(
+                passed=False,
+                constraint_name="test_suite",
+                message=f"Artifact path must be relative and inside the repo: {relpath}",
+            )
+        if not (hermes_repo / relpath).is_file():
+            return ConstraintResult(
+                passed=False,
+                constraint_name="test_suite",
+                message=f"Artifact to replace not found in hermes-agent: {relpath}",
+            )
+        try:
+            with tempfile.TemporaryDirectory(prefix="hermes-evolution-") as tmp:
+                scratch = Path(tmp) / "hermes-agent"
+                shutil.copytree(
+                    hermes_repo,
+                    scratch,
+                    symlinks=True,
+                    ignore=shutil.ignore_patterns(".git", "__pycache__", ".pytest_cache", ".venv", "venv", "node_modules"),
+                )
+                (scratch / relpath).write_text(artifact_text)
+                return self.run_test_suite(scratch, python=python)
+        except OSError as e:
+            return ConstraintResult(
+                passed=False,
+                constraint_name="test_suite",
+                message=f"Could not prepare a scratch copy of hermes-agent: {e}",
+            )
+
+    def run_test_suite(self, hermes_repo: Path, python: str = "python") -> ConstraintResult:
         """Run the full hermes-agent test suite. Must pass 100%."""
         try:
             result = subprocess.run(
-                ["python", "-m", "pytest", "tests/", "-q", "--tb=no"],
+                [python, "-m", "pytest", "tests/", "-q", "--tb=no"],
                 capture_output=True,
                 text=True,
                 timeout=300,

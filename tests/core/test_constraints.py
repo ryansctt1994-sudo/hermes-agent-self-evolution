@@ -1,5 +1,8 @@
 """Tests for constraint validators."""
 
+import sys
+from pathlib import Path
+
 import pytest
 from evolution.core.constraints import ConstraintValidator
 from evolution.core.config import EvolutionConfig
@@ -98,3 +101,57 @@ class TestValidateAll:
         results = validator.validate_all("", "skill")
         failed = [r for r in results if not r.passed]
         assert len(failed) > 0
+
+
+SKILL_REL = Path("skills") / "demo" / "SKILL.md"
+GOOD_SKILL = "---\nname: demo\ndescription: Demo skill\n---\n\n# Procedure\n1. Do thing\n"
+
+
+@pytest.fixture
+def fake_hermes(tmp_path):
+    """A minimal hermes-agent checkout whose own test checks the skill file."""
+    repo = tmp_path / "hermes-agent"
+    (repo / SKILL_REL.parent).mkdir(parents=True)
+    (repo / SKILL_REL).write_text(GOOD_SKILL)
+    (repo / "tests").mkdir()
+    (repo / "tests" / "test_skills.py").write_text(
+        "from pathlib import Path\n"
+        "def test_skill_has_frontmatter():\n"
+        f"    text = Path({str(SKILL_REL)!r}).read_text()\n"
+        "    assert text.startswith('---') and 'BROKEN' not in text\n"
+    )
+    return repo
+
+
+class TestTestSuiteGate:
+    """--run-tests: hermes-agent's suite runs on a scratch copy with the artifact in place."""
+
+    def test_passing_artifact_passes(self, validator, fake_hermes):
+        result = validator.run_test_suite_with_artifact(fake_hermes, SKILL_REL, GOOD_SKILL, python=sys.executable)
+        assert result.passed, result.details
+
+    def test_breaking_artifact_fails(self, validator, fake_hermes):
+        result = validator.run_test_suite_with_artifact(fake_hermes, SKILL_REL, GOOD_SKILL + "BROKEN\n", python=sys.executable)
+        assert not result.passed
+        assert result.constraint_name == "test_suite"
+
+    def test_real_checkout_is_never_modified(self, validator, fake_hermes):
+        before = {p: p.read_bytes() for p in fake_hermes.rglob("*") if p.is_file()}
+        validator.run_test_suite_with_artifact(fake_hermes, SKILL_REL, GOOD_SKILL + "BROKEN\n", python=sys.executable)
+        after = {p: p.read_bytes() for p in fake_hermes.rglob("*") if p.is_file()}
+        assert after == before
+
+    @pytest.mark.parametrize("bad", [Path("..") / "outside.md", Path("/etc/passwd")])
+    def test_paths_outside_the_repo_are_refused(self, validator, fake_hermes, bad):
+        result = validator.run_test_suite_with_artifact(fake_hermes, bad, GOOD_SKILL, python=sys.executable)
+        assert not result.passed and "inside the repo" in result.message
+
+    def test_missing_artifact_is_refused(self, validator, fake_hermes):
+        result = validator.run_test_suite_with_artifact(
+            fake_hermes, Path("skills") / "nope" / "SKILL.md", GOOD_SKILL, python=sys.executable
+        )
+        assert not result.passed and "not found" in result.message
+
+    def test_missing_interpreter_fails_closed(self, validator, fake_hermes):
+        result = validator.run_test_suite_with_artifact(fake_hermes, SKILL_REL, GOOD_SKILL, python="no-such-python-xyz")
+        assert not result.passed
